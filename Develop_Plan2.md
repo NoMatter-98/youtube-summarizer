@@ -42,9 +42,9 @@
 
 
 ## 横插一个：放到github上
-  - [ ] git init
-  - [ ] 写.gitignore
-  - [ ] 写requirements.txt :   .\.venv\Scripts\python.exe -m pip freeze > requirements.txt
+  - [X] git init
+  - [X] 写.gitignore
+  - [X] 写requirements.txt :   .\.venv\Scripts\python.exe -m pip freeze > requirements.txt
         对于 Node.js 部分，我们不需要额外再创建说明文件，因为这个功能已经由 package.json（npm安装的大包,只有范围版本） 和 package-lock.json(node_modules下的各个小包的精确版本)，在npm install命令时就会自动用这俩去安装了。
         - MAJOR.MINOR.PATCH  主版本（破坏性更新）.次版本（新增功能）.补丁（bug修复）
         - ^1.2.3 即<2.0.0 ，最常见
@@ -52,20 +52,21 @@
         - '*' 无限版本 ， 没人用
  
 
-  - [ ] 写README.md
-  - [ ] 写LICENSE文件，用MIT许可证
+  - [X] 写README.md
+  - [X] 写LICENSE文件，用MIT许可证
+  - [X] 上传
 
-- [ ] **方案B: 针对“无字幕”的视频**
-  - [ ] **替换转写引擎:**
-    - [ ] 决策选择一个支持时间戳功能的语音转文本（STT）服务（**推荐: OpenAI Whisper API**）。
+- [X] **方案B: 针对“无字幕”的视频**
+  - [X] **替换转写引擎:**
+    - [X] 决策选择一个支持时间戳功能的语音转文本（STT）服务（**推荐: OpenAI Whisper API**）。
     段级（segment-level）时间戳，openai 默认的whisper是可以支持的，生成字幕足够用
     逐词（word-level）时间戳，是没有的。WhisperX在 Whisper 后面加一步：用 wav2vec 做 forced alignment所以 word-level。WhisperX不是一个“独立的语音识别模型”,他是一条流水线工厂：音频 → Whisper → 文本 → 对齐模型 → 精确时间戳
-
-    - [ ] 移除 `server.js` 中调用 `Gemini 1.5 Flash` **进行转写**的部分。
-    - [ ] 将其替换为调用新的 STT 服务的 API。
-  - [ ] **实现新 API 的调用:**
-    - [ ] 确保在调用新 API 时，配置了可以返回详细时间戳的参数（例如 Whisper API 的 `response_format="verbose_json"`）。
-    - [ ] 调整代码，以正确处理和拼接从新 API 返回的、带时间戳的字幕数据。
+    - [X] npm install openai
+    - [X] 移除 `server.js` 中调用 `gemini-3-flash-preview` **进行转写**的部分。不要什么`gemini-1.5-flash`了！！！
+    - [X] 将其替换为调用新的 STT 服务的 API。
+  - [X] **实现新 API 的调用:**
+    - [X] 确保在调用新 API 时，配置了可以返回详细时间戳的参数（例如 Whisper API 的 `response_format="verbose_json"`）。
+    - [X] 调整代码，以正确处理和拼接从新 API 返回的、带时间戳的字幕数据。
 
 ---
 
