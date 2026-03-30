@@ -44,7 +44,6 @@ if (typeof window.summarizerInjected === 'undefined') {
    */
   function timestampToSeconds(ts) {
     if (!ts) return 0;
-    //const timeString = ts.replace(/\[|\]/g, ''); // 移除方括号
     const timeString = ts.replace(/[^\d:]/g, '');
     const parts = timeString.split(':').map(Number);
     let seconds = 0;
@@ -102,13 +101,14 @@ if (typeof window.summarizerInjected === 'undefined') {
     Object.assign(content.style, {
       whiteSpace: 'pre-wrap',
       wordWrap: 'break-word',
+      maxHeight: '400px',
+      overflowY: 'auto',
     });
 
     container.appendChild(title);
     container.appendChild(content);
     secondary.prepend(container);
 
-    // --- **修正：为容器添加事件委托，处理时间戳点击** ---
     content.addEventListener('click', (event) => {
       if (event.target.classList.contains('youtube-summarizer-timestamp')) {
         event.preventDefault();
@@ -117,8 +117,8 @@ if (typeof window.summarizerInjected === 'undefined') {
         
         const player = document.querySelector('video') || document.querySelector('.html5-main-video');
         if (player) {
-          player.currentTime = seconds; // **修正点**
-          player.play(); // **新增** 确保视频开始播放
+          player.currentTime = seconds;
+          player.play();
         } else {
           console.error('YouTube Summarizer: 无法找到播放器。');
         }
@@ -145,12 +145,15 @@ if (typeof window.summarizerInjected === 'undefined') {
     if (isError) {
       contentDiv.textContent = text;
     } else {
-      // 使用正则表达式查找时间戳并将其替换为可点击的链接
-      //const processedText = text.replace(/(\[\d{1,2}:\d{2}(?::\d{2})?\])/g, (match) => {
-      const processedText = text.replace(/(?:\[)?(\b\d{1,2}:\d{2}(?::\d{2})?\b)(?:\])?/g, (match, timeStr) => {
+      // 1. Convert **bold** to <strong>bold</strong>
+      let processedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      
+      // 2. Convert timestamps to clickable links
+      processedText = processedText.replace(/(?:\[)?(\b\d{1,2}:\d{2}(?::\d{2})?\b)(?:\])?/g, (match, timeStr) => {
         return `<a href="#" class="youtube-summarizer-timestamp" data-time="${match}">${match}</a>`;
       });
-      // 将处理后的文本（包含HTML）渲染到div中
+      
+      // 3. Wrap each line in a <p> tag
       contentDiv.innerHTML = processedText.split('\n').map(line => `<p>${line}</p>`).join('');
     }
   }
@@ -187,6 +190,20 @@ if (typeof window.summarizerInjected === 'undefined') {
       updateSummaryContent(`总结失败: 轮询状态时出错: ${error.message}`, true);
     }
   }
+  
+  /**
+   * 在 YouTube SPA 导航时移除摘要框。
+   */
+  function handleNavigation() {
+    const summaryContainer = document.getElementById(SUMMARY_CONTAINER_ID);
+    if (summaryContainer) {
+      summaryContainer.remove();
+    }
+  }
+  
+  // 监听 YouTube 的 "navigate" 事件
+  document.body.addEventListener('yt-navigate-finish', handleNavigation, true);
+
 
   // 监听来自 background.js 的消息
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {

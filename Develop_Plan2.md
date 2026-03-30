@@ -85,3 +85,9 @@
     - [ ] 在事件处理函数中，将时间戳文本（如 `[01:35]`）转换为总秒数（95秒）。
     - [ ] 获取页面中的 YouTube 播放器对象，并调用其 `seekTo()` 方法，将视频播放位置跳转到对应的秒数。
 
+- [ ] **界面美化**
+  - [ ] **Enhance text formatting----markdown加载样式**
+  - [ ] **Modify the summary box style----container/box四面框线、border 固定窗口大小，scrollbar 可以上下滑动**
+  - [ ] **Ensure the summary resets 加载到下一个视频时候，摘要窗口要退场**
+
+
