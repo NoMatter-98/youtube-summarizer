@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Summarizer",
+  "version": "1.1",
+  "description": "点击图标即可总结 YouTube 视频内容。",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*"
+  ],
+  "action": {
+    "default_title": "总结这个视频"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/watch*"],
+      "js": ["content.js"]
+    }
+  ]
+}
