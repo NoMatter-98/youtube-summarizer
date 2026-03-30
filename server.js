@@ -139,7 +139,7 @@ function getVideoId(url) {
  * @returns {Promise<string>} 总结内容.
  */
 async function summarizeText(text) {
-    const prompt = `请用繁体中文，根据以下内容总结出 5-10 个关键要点，并以项目符号列表（bullet points）的形式呈现。如果内容中包含时间戳（例如 [HH:MM:SS]），请在对应的要点后附上时间戳范围，以帮助定位。\n\n内容:\n"""\n${text}\n"""\n\n摘要:`;
+    const prompt = `请用繁体中文，根据以下内容总结出 5-10 个关键要点，并以项目符号列表（bullet points）的形式呈现。如果内容中包含时间戳（例如 [HH:MM:SS]），请在对应的要点前面附上时间戳范围，以帮助定位。\n\n内容:\n"""\n${text}\n"""\n\n摘要:`;
     const result = await summaryModel.generateContent(prompt);
     return result.response.text();
 }

@@ -17,23 +17,43 @@ if (typeof window.summarizerInjected === 'undefined') {
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
-      #${SUMMARY_CONTAINER_ID} ul {
-        padding-left: 20px;
-        margin: 8px 0;
+      #${SUMMARY_CONTAINER_ID} p {
+        margin-bottom: 12px;
+        line-height: 1.5;
       }
-      #${SUMMARY_CONTAINER_ID} li {
-        margin-bottom: 10px;
-        line-height: 1.4;
+      #${SUMMARY_CONTAINER_ID} strong {
+        font-weight: bold;
       }
-      #${SUMMARY_CONTAINER_ID} code {
-        font-size: 0.9em;
-        background-color: var(--yt-spec-badge-chip-background);
-        padding: 2px 5px;
-        border-radius: 4px;
-        font-family: "Roboto Mono", monospace;
+      .youtube-summarizer-timestamp {
+        cursor: pointer;
+        color: var(--yt-spec-call-to-action);
+        font-weight: bold;
+        text-decoration: none;
+      }
+      .youtube-summarizer-timestamp:hover {
+        text-decoration: underline;
       }
     `;
     document.head.appendChild(style);
+  }
+
+  /**
+   * 将时间戳字符串（如 [01:35] 或 [01:02:15]）转换为总秒数。
+   * @param {string} ts - 时间戳字符串。
+   * @returns {number} 总秒数。
+   */
+  function timestampToSeconds(ts) {
+    if (!ts) return 0;
+    //const timeString = ts.replace(/\[|\]/g, ''); // 移除方括号
+    const timeString = ts.replace(/[^\d:]/g, '');
+    const parts = timeString.split(':').map(Number);
+    let seconds = 0;
+    if (parts.length === 3) { // [HH:MM:SS]
+      seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+    } else if (parts.length === 2) { // [MM:SS]
+      seconds = parts[0] * 60 + parts[1];
+    }
+    return seconds;
   }
 
   /**
@@ -46,7 +66,6 @@ if (typeof window.summarizerInjected === 'undefined') {
       return container;
     }
 
-    // 注入样式
     injectStyles();
 
     const secondary = document.getElementById('secondary');
@@ -55,7 +74,6 @@ if (typeof window.summarizerInjected === 'undefined') {
       return null;
     }
 
-    // --- 创建 UI 元素 ---
     container = document.createElement('div');
     container.id = SUMMARY_CONTAINER_ID;
 
@@ -66,7 +84,6 @@ if (typeof window.summarizerInjected === 'undefined') {
     content.id = 'youtube-summarizer-content';
     content.textContent = '正在请求摘要...';
 
-    // --- 添加样式 (适配 YouTube 暗色/亮色主题) ---
     Object.assign(container.style, {
       border: '1px solid var(--yt-spec-10-percent-layer)',
       borderRadius: '12px',
@@ -76,7 +93,6 @@ if (typeof window.summarizerInjected === 'undefined') {
       color: 'var(--yt-spec-text-primary)',
       fontFamily: 'Roboto, Arial, sans-serif',
       fontSize: '14px',
-      lineHeight: '1.5',
     });
     Object.assign(title.style, {
       fontSize: '18px',
@@ -84,14 +100,30 @@ if (typeof window.summarizerInjected === 'undefined') {
       margin: '0 0 12px 0',
     });
     Object.assign(content.style, {
-      whiteSpace: 'pre-wrap', // 保留总结中的换行
+      whiteSpace: 'pre-wrap',
       wordWrap: 'break-word',
     });
 
-    // --- 组装并注入页面 ---
     container.appendChild(title);
     container.appendChild(content);
-    secondary.prepend(container); // 插入到相关视频列表的顶部
+    secondary.prepend(container);
+
+    // --- **修正：为容器添加事件委托，处理时间戳点击** ---
+    content.addEventListener('click', (event) => {
+      if (event.target.classList.contains('youtube-summarizer-timestamp')) {
+        event.preventDefault();
+        const timestamp = event.target.dataset.time;
+        const seconds = timestampToSeconds(timestamp);
+        
+        const player = document.querySelector('video') || document.querySelector('.html5-main-video');
+        if (player) {
+          player.currentTime = seconds; // **修正点**
+          player.play(); // **新增** 确保视频开始播放
+        } else {
+          console.error('YouTube Summarizer: 无法找到播放器。');
+        }
+      }
+    });
 
     return container;
   }
@@ -111,61 +143,33 @@ if (typeof window.summarizerInjected === 'undefined') {
     contentDiv.style.color = isError ? 'var(--yt-spec-error-indicator)' : 'var(--yt-spec-text-primary)';
 
     if (isError) {
-      // 对于错误信息，直接显示纯文本
       contentDiv.textContent = text;
     } else {
-      // 对于总结内容，将 Markdown 格式转换为 HTML
-      const lines = text.split('\n');
-      let htmlOutput = '';
-      let listOpen = false;
-
-      for (const line of lines) {
-        const trimmedLine = line.trim();
-        // 检查是否为项目符号列表
-        if (trimmedLine.startsWith('* ') || trimmedLine.startsWith('- ')) {
-          if (!listOpen) {
-            htmlOutput += '<ul>';
-            listOpen = true;
-          }
-          // 转换行内 Markdown (加粗和时间戳)
-          const itemContent = trimmedLine.substring(2)
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/(\[([0-9]{2}:){2}[0-9]{2}\])/g, '<code>$1</code>');
-          htmlOutput += `<li>${itemContent}</li>`;
-        } else {
-          if (listOpen) {
-            htmlOutput += '</ul>';
-            listOpen = false;
-          }
-          if (trimmedLine) {
-            htmlOutput += `<p>${trimmedLine.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</p>`;
-          }
-        }
-      }
-
-      if (listOpen) htmlOutput += '</ul>';
-      contentDiv.innerHTML = htmlOutput;
+      // 使用正则表达式查找时间戳并将其替换为可点击的链接
+      //const processedText = text.replace(/(\[\d{1,2}:\d{2}(?::\d{2})?\])/g, (match) => {
+      const processedText = text.replace(/(?:\[)?(\b\d{1,2}:\d{2}(?::\d{2})?\b)(?:\])?/g, (match, timeStr) => {
+        return `<a href="#" class="youtube-summarizer-timestamp" data-time="${match}">${match}</a>`;
+      });
+      // 将处理后的文本（包含HTML）渲染到div中
+      contentDiv.innerHTML = processedText.split('\n').map(line => `<p>${line}</p>`).join('');
     }
   }
 
   /**
-   * 轮询函数，用于定期检查任务状态。现在这个函数在 content.js 中运行，生命周期和页面一样长。
+   * 轮询函数，用于定期检查任务状态。
    * @param {string} taskId - 要查询的任务 ID
    * @param {number} attempts - 当前尝试次数
    */
   async function pollForResult(taskId, attempts = 0) {
-    const MAX_ATTEMPTS = 360; // 最多尝试 360 次 (约 30 分钟)
-    const POLLING_INTERVAL = 5000; // 每 5 秒轮询一次
+    const MAX_ATTEMPTS = 360; // ~30 分钟
+    const POLLING_INTERVAL = 5000; // 5 秒
 
     if (attempts >= MAX_ATTEMPTS) {
-      const errorMsg = "总结任务超时，请稍后再试。";
-      console.error(`Task ${taskId} timed out.`);
-      updateSummaryContent(errorMsg, true);
+      updateSummaryContent("总结任务超时，请稍后再试。", true);
       return;
     }
 
     try {
-      // content.js 直接请求后端，因为 manifest.json 中有 host_permissions
       const response = await fetch(`http://localhost:3000/status/${taskId}`);
       const task = await response.json();
 
@@ -174,7 +178,6 @@ if (typeof window.summarizerInjected === 'undefined') {
       } else if (task.status === 'error') {
         updateSummaryContent(`总结失败: ${task.data.error}`, true);
       } else if (task.status === 'processing') {
-        // 任务仍在进行中，设定下一次轮询
         setTimeout(() => pollForResult(taskId, attempts + 1), POLLING_INTERVAL);
       } else {
         updateSummaryContent("总结失败: 未知的任务状态。", true);
@@ -188,13 +191,10 @@ if (typeof window.summarizerInjected === 'undefined') {
   // 监听来自 background.js 的消息
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.type === 'SHOW_LOADING') {
-      // 确保UI已创建并显示加载信息
       updateSummaryContent('正在为您总结，请稍候... 这可能需要几分钟。');
     } else if (request.type === 'START_POLLING') {
-      // 收到 background.js 的指令，开始轮询
       pollForResult(request.taskId);
     } else if (request.type === 'SHOW_ERROR') {
-      // 处理来自 background.js 的初始错误（例如，启动任务失败）
       updateSummaryContent(`总结失败: ${request.error}`, true);
     }
   });
